@@ -1,0 +1,34 @@
+services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "5000:5000"
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+    depends_on:
+      - redis
+      - worker
+    volumes:
+      - ./upload_pics:/app/upload_pics
+      - ./processed_pics:/app/processed_pics
+      - ./EDSR_x2.pb:/app/EDSR_x2.pb:ro
+
+  worker:
+    build: .
+    command: celery -A tasks worker --loglevel=info --concurrency=1
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    volumes:
+      - ./upload_pics:/app/upload_pics
+      - ./processed_pics:/app/processed_pics
+      - ./EDSR_x2.pb:/app/EDSR_x2.pb:ro
